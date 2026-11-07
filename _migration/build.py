@@ -162,6 +162,19 @@ def transform(path, html):
 
     if path == "/":
         html = add_redirect(html)
+        html = clean_home_grid(html)
+    return html
+
+
+def clean_home_grid(html):
+    """Home grid: drop empty <img src=""> placeholders (broken-image icons), the empty demo item
+    "Quiet Village", and make the 2-column photos single-column so the masonry grid has no holes."""
+    html = re.sub(r'<div class="images"><img src="" alt="[^"]*" /></div>\s*', "", html)
+    html = re.sub(r'<div class="element clearfix col2-3 home  all home overflow load-content">'
+                  r'(?:(?!<div class="element).)*?Quiet Village(?:(?!<div class="element).)*', "", html, flags=re.S)
+    html = html.replace('class="element clearfix col2-3 ', 'class="element clearfix col1-3 ')
+    html = re.sub(r'(<img[^>]*?)class="attachment-lscape-large size-lscape-large',
+                  r'\1class="attachment-lscape-medium size-lscape-medium', html)
     return html
 
 
