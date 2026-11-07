@@ -8,9 +8,8 @@ Static copy of the former WordPress site (WordPress 5.7, theme "mf"), served by 
 | Path | What |
 |---|---|
 | `index.html` | Home (portfolio grid, About, Contact) |
-| `portfolio/<slug>/` | 25 portfolio items |
-| `blog/`, `we-appreciate-any-kind-of-feedback/` | Blog listing + its single post |
-| `category/`, `tag/`, `type/`, `portfolio-category/`, `author/` | Archive pages |
+| `portfolio/<slug>/` | 24 portfolio items |
+| `portfolio-category/<name>/` | Nature, People, Places archives |
 | `wp-content/`, `wp-includes/` | Theme CSS/JS, images and jQuery, at their original paths |
 | `assets/fonts/` | Self-hosted Open Sans (replaces Google Fonts) |
 | `404.html`, `sitemap.xml`, `robots.txt`, `CNAME`, `.nojekyll` | GitHub Pages files |
@@ -25,6 +24,9 @@ the new address (map in `_migration/legacy-map.json`). Canonical tags point at t
 
 ## Removed during migration
 
+- WordPress theme demo content ("lorem ipsum"): the Blog page and its only post, the "Quiet Village"
+  portfolio item, and the video category/tag/format and author archives. Their old URLs redirect
+  to the home page.
 - Injected spam: a hidden link in the footer widget and a link inside the blog post.
 - Comment form (needs a server); RSS feeds, REST API, oEmbed, XML-RPC, emoji script, wp-embed,
   block-library CSS, Google Maps script (unused), IE8 shims.

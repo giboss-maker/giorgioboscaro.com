@@ -58,6 +58,13 @@ for url, info in manifest["pages"].items():
         continue
     pages[p] = open(f"{MIRROR}/pages/{info['key']}.html", encoding="utf-8").read()
 
+# theme demo content ("lorem ipsum") removed from the static site; old URLs go to the home page
+REMOVED = ["/blog/", "/we-appreciate-any-kind-of-feedback/", "/portfolio/quiet-village/",
+           "/category/video/", "/tag/video/", "/type/video/", "/author/giboss/"]
+template_404_src = pages["/portfolio-category/nature/"]
+for p in REMOVED:
+    pages.pop(p, None)
+
 # legacy redirect map for the JS shim (old query -> new path)
 legacy = {}
 for url in manifest["pages"]:
@@ -68,15 +75,17 @@ legacy.update({k: v for k, v in SPECIAL.items()})
 for short, canon in aliases.items():
     if new_path(canon):
         legacy[short] = new_path(canon)
+legacy = {k: ("/" if v in REMOVED else v) for k, v in legacy.items()}
 SPECIAL.update({k: legacy[k] for k in aliases if k in legacy})  # rewrite shortlink hrefs too
 
 REDIRECT_JS = """<script>
 /* Legacy WordPress URLs (?p=, ?page_id=, ?portfolio=...) -> static paths */
-(function(){var s=location.search;if(!s||s.length<2)return;var m=%s,q=s.slice(1),t=m[q];
+(function(){var r=%s;if(r.indexOf(location.pathname)>-1){location.replace('/');return;}
+var s=location.search;if(!s||s.length<2)return;var m=%s,q=s.slice(1),t=m[q];
 if(!t){var a=q.split('&')[0].split('='),k=a[0],v=a[1],pre={'portfolio':'/portfolio/','portfolio-category':'/portfolio-category/','tag':'/tag/','post_format':'/type/'};
 if(pre[k]&&v)t=pre[k]+v+'/';else if(/^(feed|page_id|p|cat|author|s|paged|attachment_id)=/.test(q))t='/';}
 if(t&&t!==location.pathname)location.replace(t+location.hash);})();
-</script>""" % json.dumps(legacy, separators=(",", ":"), sort_keys=True)
+</script>""" % (json.dumps(REMOVED, separators=(",", ":")), json.dumps(legacy, separators=(",", ":"), sort_keys=True))
 
 GTM_NOSCRIPT = (f'<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={GTM_ID}"\n'
                 'height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>\n<!-- End Google Tag Manager (noscript) -->')
@@ -152,6 +161,13 @@ def transform(path, html):
         return m.group(1) + target + (m.group(3) or "")
     html = re.sub(r"((?:href|action)=[\"'])" + OLD + r"/?(\?[^\"'#]*)?(#[^\"']*)?(?=[\"'])", link, html)
     html = re.sub(r"(href=[\"'])/(\?[^\"'#]+)(#[^\"']*)?(?=[\"'])", link, html)
+
+    # links to removed demo pages: "Blog" menu item, prev/next links
+    html = re.sub(r'<li class="page_item page-item-47[^"]*"><a href="/blog/"[^>]*>Blog</a></li>\s*', "", html)
+    html = re.sub(r'<p class="small bottom(?: right)?"><a href="(?:%s)"[^>]*>[^<]*</a></p>' % "|".join(map(re.escape, REMOVED)), "", html)
+    for p in REMOVED:
+        if f'href="{p}"' in html:
+            print(f"  [{path}] still links to removed page {p}")
 
     # canonical
     canon = f'<link rel="canonical" href="{NEW_ORIGIN}{path}" />'
@@ -236,7 +252,7 @@ open(os.path.join(fdir, "open-sans.css"), "w").write("\n".join(css) + "\n")
 shutil.copy2(f"{FONTS}/LICENSE", os.path.join(fdir, "LICENSE-OFL.txt"))
 
 # 404 page: reuse the blog listing template, with the legacy redirect shim
-tpl = transform("/404.html", pages["/blog/"])
+tpl = transform("/404.html", template_404_src)
 body404 = ('<div class="element clearfix col1-3 no-image">\n<h2>Page not found</h2>\n'
            '<p>The page you are looking for does not exist. <a href="/">Back to the home page &rarr;</a></p>\n</div>\n')
 tpl = re.sub(r'(<div id="container" class="clearfix">).*?(</div></div><footer>)', lambda m: m.group(1) + "\n" + body404 + m.group(2), tpl, count=1, flags=re.S)
@@ -255,7 +271,7 @@ for p in order:
 sm.append("</urlset>")
 open(os.path.join(SITE, "sitemap.xml"), "w").write("\n".join(sm) + "\n")
 open(os.path.join(SITE, "robots.txt"), "w").write(f"User-agent: *\nAllow: /\n\nSitemap: {NEW_ORIGIN}/sitemap.xml\n")
-open(os.path.join(SITE, "CNAME"), "w").write("www.giorgioboscaro.com\n")
+open(os.path.join(SITE, "CNAME"), "w").write("www.giorgioboscaro.com")  # as GitHub writes it
 open(os.path.join(SITE, ".nojekyll"), "w").write("")
 json.dump(legacy, open(os.path.join(MIRROR, "legacy-map.json"), "w"), indent=1, sort_keys=True)
 print(f"built {len(pages)} pages")
