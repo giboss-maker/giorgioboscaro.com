@@ -111,6 +111,12 @@ def transform(path, html):
     for pat in HEAD_REMOVE:
         html = re.sub(pat, "", html, flags=re.S)
 
+    # theme JS fix: jQuery 3 removed $.browser, which the bundled hashchange plugin reads,
+    # so plugins.js crashed and isotope/fancybox never loaded (broken on the live site since WP 5.6)
+    html = re.sub(r"(<script type='text/javascript' src='[^']*/modernizr\.js[^']*')",
+                  lambda m: "<script type='text/javascript' src='/assets/js/jquery-browser-shim.js'></script>\n" + m.group(1),
+                  html, count=1)
+
     # Google Fonts -> self-hosted
     html = re.sub(r"<link rel='stylesheet' id='font-css'\s+href='https://fonts\.googleapis\.com/[^']*'",
                   "<link rel='stylesheet' id='font-css'  href='/assets/fonts/open-sans.css'", html)
@@ -188,6 +194,16 @@ for root, _, files in os.walk(f"{MIRROR}/files"):
         dest = os.path.join(SITE, rel)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copy2(src, dest)
+
+# jQuery.browser shim (see transform)
+os.makedirs(os.path.join(SITE, "assets/js"), exist_ok=True)
+open(os.path.join(SITE, "assets/js/jquery-browser-shim.js"), "w").write(
+    "/* Restores jQuery.browser (removed in jQuery 1.9) for the theme's hashchange plugin. */\n"
+    "if (window.jQuery && !jQuery.browser) { jQuery.browser = { msie: false, version: '0' }; }\n"
+    "/* The theme bundles the goMap plugin, which needs these two Google Maps classes at load time.\n"
+    "   The site shows no maps, so the Maps API is not loaded; minimal placeholders keep plugins.js running. */\n"
+    "if (!window.google) { window.google = {}; }\n"
+    "if (!google.maps) { google.maps = { Geocoder: function () {}, OverlayView: function () {} }; }\n")
 
 # fonts
 fdir = os.path.join(SITE, "assets/fonts")

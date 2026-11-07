@@ -29,6 +29,13 @@ the new address (map in `_migration/legacy-map.json`). Canonical tags point at t
 - Comment form (needs a server); RSS feeds, REST API, oEmbed, XML-RPC, emoji script, wp-embed,
   block-library CSS, Google Maps script (unused), IE8 shims.
 
+## Theme JavaScript fix
+
+Since WordPress 5.6 (jQuery 3) the theme's `plugins.js` crashed on `$.browser.msie`, so the masonry
+grid, category filters, About/Contact menu and photo lightbox stopped working on the old site.
+`assets/js/jquery-browser-shim.js` restores `jQuery.browser` and adds placeholders for the two Google
+Maps classes the bundled (unused) goMap plugin touches at load time. No theme file was edited.
+
 ## Local preview
 
 ```bash
