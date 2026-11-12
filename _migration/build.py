@@ -169,6 +169,11 @@ def transform(path, html):
         if f'href="{p}"' in html:
             print(f"  [{path}] still links to removed page {p}")
 
+    # footer: friendlier wording than the original copyright warning
+    html = re.sub(r'<p class="small">All the pictures contained on this site are protected by copyright law[^<]*</p>',
+                  '<p class="small">Photographs by Giorgio Boscaro. For use or prints, please '
+                  '<a href="/#filter=.contact">get in touch</a>.</p>', html)
+
     # canonical
     canon = f'<link rel="canonical" href="{NEW_ORIGIN}{path}" />'
     if re.search(r'<link rel="canonical"[^>]*>', html):
