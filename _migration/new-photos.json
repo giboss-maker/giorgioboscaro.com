@@ -1,0 +1,11 @@
+{
+  "upload_dir": "wp-content/uploads/2026/11",
+  "after": "my-music-is-my-language",
+  "photos": [
+    {"slug": "sleeping-above-the-clouds", "title": "Sleeping above the clouds", "file": "fog-village-website.jpg",          "categories": ["Nature", "Places"], "date": ""},
+    {"slug": "time-crossing",             "title": "Time crossing",             "file": "clock-tower-website.jpg",          "categories": ["Places"],           "date": ""},
+    {"slug": "better-half",               "title": "Better half",               "file": "limes-website.jpg",                "categories": ["Objects"],          "date": ""},
+    {"slug": "sunbathing",                "title": "Sunbathing",                "file": "butterfly-website.jpg",            "categories": ["Nature"],           "date": ""},
+    {"slug": "praying-without-a-roof",    "title": "Praying without a roof",    "file": "san-galgano-blue-hour-website.jpg","categories": ["Places"],           "date": ""}
+  ]
+}

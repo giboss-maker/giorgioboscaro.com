@@ -65,6 +65,87 @@ template_404_src = pages["/portfolio-category/nature/"]
 for p in REMOVED:
     pages.pop(p, None)
 
+# ---- photos added after the migration (_migration/new-photos.json + _migration/photos/) ----
+HERE = os.path.dirname(os.path.abspath(__file__))
+NEWP = json.load(open(os.path.join(HERE, "new-photos.json")))
+RAW = "https://giorgioboscaro.com"
+
+
+def add_new_photos():
+    up = f"{RAW}/{NEWP['upload_dir']}/"
+    items = NEWP["photos"]
+    cats_all = sorted({c for p in items for c in p["categories"]})
+    tpl_page = pages["/portfolio/golden-hour/"]
+    for i, p in enumerate(items):
+        cls = " ".join(c.lower() for c in p["categories"])
+        # portfolio page, cloned from "Golden hour" (raw WordPress markup, transformed later like the rest)
+        h = tpl_page.replace(f"{RAW}/wp-content/uploads/2014/09/San-Galgano-13-website.jpg", up + p["file"])
+        h = re.sub(r'[ \t]*<link rel="alternate" type="application/rss\+xml"[^>]*>\n?', "", h)
+        h = re.sub(r"<title>.*?</title>", f"<title>  {escape(p['title'])}</title>", h, count=1, flags=re.S)
+        h = h.replace("<h2>Golden hour</h2>", f"<h2>{escape(p['title'])}</h2>")
+        h = re.sub(r'<link rel="canonical"[^>]*>', f'<link rel="canonical" href="{RAW}/?portfolio={p["slug"]}" />', h)
+        pid = str(2000 + i)
+        h = h.replace("postid-140", "postid-" + pid).replace("post-140 ", f"post-{pid} ").replace("140load", pid + "load")
+        h = h.replace("portfolio-category-nature portfolio-category-places",
+                      " ".join("portfolio-category-" + c.lower() for c in p["categories"]))
+        h = h.replace('alt="" loading="lazy"', f'alt="{escape(p["title"])}" loading="lazy"', 1)
+        prev_slug = items[i - 1]["slug"] if i else NEWP["after"]
+        nav = f'<p class="small bottom"><a href="{RAW}/?portfolio={prev_slug}" rel="prev">Previous Post</a></p>'
+        if i + 1 < len(items):
+            nav += f'<p class="small bottom right"><a href="{RAW}/?portfolio={items[i+1]["slug"]}" rel="next">Next Post</a></p>'
+        h = re.sub(r'<p class="small bottom">.*?</div>', nav + "</div>", h, count=1, flags=re.S)
+        date = f"\n\t<p>Date: {escape(p['date'])}</p>" if p.get("date") else ""
+        h = h.replace("<h2>Project Details</h2>", "<h2>Project Details</h2>" + date, 1)
+        assert "Golden hour" not in h and "San-Galgano-13" not in h, p["slug"]
+        pages[f"/portfolio/{p['slug']}/"] = h
+    # link the previously newest item forward
+    last = pages[f"/portfolio/{NEWP['after']}/"]
+    pages[f"/portfolio/{NEWP['after']}/"] = re.sub(
+        r'(<p class="small bottom"><a [^>]*rel="prev">Previous Post</a></p>)',
+        lambda m: m.group(1) + f'<p class="small bottom right"><a href="{RAW}/?portfolio={items[0]["slug"]}" rel="next">Next Post</a></p>',
+        last, count=1)
+    # home grid: new items first, right after the filter box
+    blocks = ""
+    for p in items:
+        cls = " ".join(c.lower() for c in p["categories"])
+        t = escape(p["title"])
+        blocks += f'''			<div class="element clearfix col1-3  {cls} all home overflow load-content">
+				  <div class="images">
+				  	<a href="{up}{p["file"]}" title="{t} &nbsp;  &nbsp; " rel="group">
+				  <img width="1" height="1" src="{up}{p["file"]}" class="attachment-lscape-medium size-lscape-medium wp-post-image" alt="{t}" loading="lazy" />
+					    <div class="title">
+					      <div class="title-wrap">
+					        <h3><span>{t}</span></h3>					      </div>
+					    </div>
+					    <div class="subtitle">
+					      <div class="subtitle-wrap">
+					        <p><span>{", ".join(p["categories"])}</span></p>
+					      </div>
+					    </div>
+				    </a>
+				  </div>
+				</div>
+'''
+    home = pages["/"]
+    first = home.index('<div class="element clearfix col1-3  people all home overflow load-content">')
+    home = home[:first] + blocks + home[first:]
+    # category filters + archive pages for categories that did not exist yet
+    for c in cats_all:
+        if f"#filter=.{c.lower()}," in home:
+            continue
+        links = re.findall(r'<a href="#filter=\.([a-z]+),\+\.menu">', home)
+        after = max([l for l in links if l < c.lower() and l != "all"] or [links[0]])
+        home = re.sub(r'(<a href="#filter=\.%s,\+\.menu">[^<]*<span class="arrow">[^<]*</span></a><br />)' % after,
+                      lambda m: m.group(1) + f'<a href="#filter=.{c.lower()},+.menu">{c} <span class="arrow">→</span></a><br />',
+                      home, count=1)
+        arch = pages["/portfolio-category/nature/"].replace("Nature", c).replace("term-nature", "term-" + c.lower())
+        arch = arch.replace("portfolio-category=nature", "portfolio-category=" + c.lower())
+        pages[f"/portfolio-category/{c.lower()}/"] = arch
+    pages["/"] = home
+
+
+add_new_photos()
+
 # legacy redirect map for the JS shim (old query -> new path)
 legacy = {}
 for url in manifest["pages"]:
@@ -228,6 +309,12 @@ for root, _, files in os.walk(f"{MIRROR}/files"):
         dest = os.path.join(SITE, rel)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copy2(src, dest)
+
+# photos added after the migration
+for p in NEWP["photos"]:
+    dest = os.path.join(SITE, NEWP["upload_dir"], p["file"])
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    shutil.copy2(os.path.join(HERE, "photos", p["file"]), dest)
 
 # jQuery.browser shim (see transform)
 os.makedirs(os.path.join(SITE, "assets/js"), exist_ok=True)
